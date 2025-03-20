@@ -9,7 +9,7 @@ from io import BytesIO
 COMPANIES = ["Tesla", "Apple", "Microsoft", "Amazon", "Google"]
 
 st.title("News Sentiment Analyzer")
-st.subheader("🔍 Select a company to analyze its latest news sentiment")
+st.subheader("Select a company to analyze its latest news sentiment")
 
 # Dropdown for company selection
 company_name = st.selectbox("Choose a company", COMPANIES)
