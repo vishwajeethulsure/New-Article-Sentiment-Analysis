@@ -8,7 +8,7 @@ from io import BytesIO
 # List of companies for dropdown
 COMPANIES = ["Tesla", "Apple", "Microsoft", "Amazon", "Google"]
 
-st.title("📰 News Sentiment Analyzer")
+st.title("News Sentiment Analyzer")
 st.subheader("🔍 Select a company to analyze its latest news sentiment")
 
 # Dropdown for company selection
@@ -39,7 +39,7 @@ def get_news_articles(company_name):
 news_df = get_news_articles(company_name)
 
 # Display news articles
-st.write(f"## 📢 Latest News for {company_name}")
+st.write(f"## Latest News for {company_name}")
 st.dataframe(news_df[["Title", "Summary", "URL"]])
 
 # Sentiment Analysis using VADER
@@ -58,7 +58,7 @@ def analyze_sentiment(text):
 news_df["Sentiment"] = news_df["Summary"].apply(analyze_sentiment)
 
 # Display updated dataframe
-st.write(f"### 📊 Sentiment Analysis for {company_name}")
+st.write(f"### Sentiment Analysis for {company_name}")
 st.dataframe(news_df[["Title", "Sentiment"]])
 
 # Generate Hindi TTS Summary
@@ -78,8 +78,8 @@ def generate_hindi_tts():
     return audio_bytes.getvalue()
 
 # Generate and display TTS audio
-st.write("### 🎙️ Hindi Audio Summary")
-if st.button("🔊 Generate & Play Audio"):
+st.write("### Hindi Audio Summary")
+if st.button("Generate & Play Audio"):
     audio_data = generate_hindi_tts()
     st.audio(audio_data, format="audio/mp3")
-    st.success("✅ Audio generated successfully!")
+    st.success("Audio generated successfully!")
