@@ -13,7 +13,7 @@ st.subheader("🔍 Select a company to analyze its latest news sentiment")
 company_name = st.selectbox("Choose a company", COMPANIES)
 
 # Fetch news from FastAPI
-api_url = f"http://localhost:7860/news?company={company_name}"
+api_url = f"https://your-fastapi-backend.onrender.com/news?company={company_name}"
 response = requests.get(api_url)
 
 if response.status_code == 200:
