@@ -1,55 +1,58 @@
-import streamlit as st
+from fastapi import FastAPI
 import requests
+from bs4 import BeautifulSoup
 import pandas as pd
-from gtts import gTTS
-from io import BytesIO
+from nltk.sentiment import SentimentIntensityAnalyzer
+import nltk
 
-# Dropdown for company selection
-COMPANIES = ["Tesla", "Apple", "Microsoft", "Amazon", "Google"]
+# Download the VADER lexicon
+nltk.download('vader_lexicon')
 
-st.title("📰 News Sentiment Analyzer")
-st.subheader("🔍 Select a company to analyze its latest news sentiment")
+app = FastAPI()
+sia = SentimentIntensityAnalyzer()
 
-company_name = st.selectbox("Choose a company", COMPANIES)
+# Function to scrape latest news
+def get_news_articles(company_name):
+    """Fetches latest news articles from Bing News."""
+    search_url = f"https://www.bing.com/news/search?q={company_name}&FORM=HDRSC6"
+    headers = {"User-Agent": "Mozilla/5.0"}
+    
+    response = requests.get(search_url, headers=headers)
+    soup = BeautifulSoup(response.text, "html.parser")
 
-# Fetch news from FastAPI
-api_url = f"https://your-fastapi-backend.onrender.com/news?company={company_name}"
-response = requests.get(api_url)
+    articles = soup.find_all("a", {"class": "title"})
+    summaries = soup.find_all("div", {"class": "snippet"})
 
-if response.status_code == 200:
-    news_data = response.json()
-    news_df = pd.DataFrame(news_data)
+    news_data = []
+    for i in range(min(len(articles), 10)):  # Limit to 10 articles
+        title = articles[i].text.strip()
+        summary = summaries[i].text.strip() if i < len(summaries) else "No summary available"
+        link = articles[i]["href"]
+        news_data.append({"Title": title, "Summary": summary, "URL": link})
 
-    if not news_df.empty:
-        st.write(f"## 📢 Latest News for {company_name}")
-        st.dataframe(news_df[["Title", "Summary", "Sentiment", "URL"]])
+    return pd.DataFrame(news_data)
 
-        # Sentiment Distribution
-        sentiment_counts = news_df["Sentiment"].value_counts()
-        st.write("### 📊 Sentiment Distribution")
-        st.bar_chart(sentiment_counts)
+# Function to analyze sentiment
+def analyze_sentiment(text):
+    """Classifies sentiment as Positive, Negative, or Neutral."""
+    score = sia.polarity_scores(text)["compound"]
+    return "Positive" if score > 0.05 else "Negative" if score < -0.05 else "Neutral"
 
-        # Generate Hindi TTS Summary
-        def generate_hindi_tts():
-            sentiment_summary = (
-                f"इस कंपनी के समाचारों का विश्लेषण किया गया है। "
-                f"कुल {len(news_df)} समाचार लेखों में से, "
-                f"{sentiment_counts.get('Positive', 0)} सकारात्मक हैं, "
-                f"{sentiment_counts.get('Neutral', 0)} तटस्थ हैं, "
-                f"और {sentiment_counts.get('Negative', 0)} नकारात्मक हैं।"
-            )
-            tts = gTTS(text=sentiment_summary, lang="hi")
-            audio_bytes = BytesIO()
-            tts.write_to_fp(audio_bytes)
-            return audio_bytes.getvalue()
+# API Endpoint: Get news articles and sentiment analysis
+@app.get("/news")
+def fetch_news(company: str):
+    news_df = get_news_articles(company)
+    
+    if news_df.empty:
+        return {"message": "No news found for this company."}
 
-        # Generate and display TTS audio
-        st.write("### 🎙️ Hindi Audio Summary")
-        if st.button("🔊 Generate & Play Audio"):
-            audio_data = generate_hindi_tts()
-            st.audio(audio_data, format="audio/mp3")
-            st.success("✅ Audio generated successfully!")
-    else:
-        st.warning("No news found for this company.")
-else:
-    st.error("Error fetching news. Please try again later.")
+    # Apply sentiment analysis
+    news_df["Sentiment"] = news_df["Summary"].apply(analyze_sentiment)
+
+    # Convert DataFrame to JSON format
+    return news_df.to_dict(orient="records")
+
+# API Health Check
+@app.get("/")
+def home():
+    return {"message": "News Sentiment API is running!"}
